@@ -12,12 +12,11 @@ void error(const char *msg)
     exit(1);
 }
 
-void init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
-
+void sockaddr_in init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
     int portno;
 
 //clean the serv_add structure
-    memset(serv_addr, 0,sizeof(serv_addr));
+    memset(serv_addr, '0',sizeof(serv_addr));
 
 //cast the port from a string to an int
     portno   = atoi(port);
@@ -51,21 +50,36 @@ int do_socket(int domain, int type, int protocol) {
 }
 
 void do_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-  int b;
-  b= bind(sockfd,addr,sizeof(*addr));
-  if (b == -1){
+  int sockBind;
+  sockBind= bind(sockfd,addr,sizeof(*addr));
+  if (sockBind == -1){
     perror("bind");
     exit(EXIT_FAILURE);
   }
 }
 
-void do_accept(int socket, struct sockaddr* addr, socklen_t* addrlen) {
-  int accepter;
-  accepter = accept(socket,addr,addrlen);
-  if (accepter == -1) {
+int do_accept(int socket, struct sockaddr* addr, socklen_t* addrlen) {
+  int sockAccept;
+  sockAccept = accept(socket,addr,addrlen);
+  if (sockAccept == -1) {
     perror("accept");
     exit(EXIT_FAILURE);
   }
+  return sockAccept;
+}
+
+void do_read(int sockfd, char* buf, int len){
+  int sockRead = 0;
+  do{
+    sockRead += read(sockfd, buf+sockRead, len-sockRead);
+  } while(sockRead != len);
+}
+
+void do_write(int fd, const void *buf, size_t len){
+  int sockWrite = 0;
+  do{
+    sockWrite += write(fd, buf+sockWrite, len-sockWrite);
+  } while(sockWrite != len);
 }
 
 int main(int argc, char** argv)
@@ -80,23 +94,23 @@ int main(int argc, char** argv)
 
     //create the socket, check for validity!
     //do_socket()
-    int sock;
-    sock = do_socket(PF_INET,SOCK_STREAM,0);
+    int sock = do_socket(PF_INET,SOCK_STREAM,0);
 
 
     //init the serv_add structure
     //init_serv_addr()
-    init_serv_addr(argv[1],argv[0]);
+    struct sockaddr_in sockAddr;
+    init_serv_addr(argv[1], sockAddr);
 
     //perform the binding
     //we bind on the tcp port specified
     //do_bind()
-    do_bind(sock,argv[0],sizeof(argv[0]));
+    do_bind(sock,sockAddr,sizeof(*sockAddr));
+
     //specify the socket to be a server socket and listen for at most 20 concurrent client
     //listen()
-    int ecoute;
-    ecoute = listen(sock,20);
-    if(ecoute == -1){
+    int sockListen = listen(sock,20);
+    if(sockListen== -1){
       perror("listen");
       exit(EXIT_FAILURE);
     }
@@ -106,18 +120,26 @@ int main(int argc, char** argv)
 
         //accept connection from client
         //do_accept()
-        do_accept(sock,argv[0],sizeof(argv[0]));
+        int sockAccept = do_accept(sock,sockAddr,sizeof(*sockAddr));
 
+        while(true){
+          char *buf = malloc(sizeof(char));
+          int len;
+          do{
+            printf("Veuillez entrer la taille de votre message\n");
+            scanf('%d',&len);
+          } while(len < 0);
         //read what the client has to say
-        //do_read()
-
+          do_read(sock, buf, len);
+        }
         //we write back to the client
-        //do_write()
+        do_write(sockAccept, buf, len);
 
         //clean up client socket
     }
 
     //clean up server socket
+    close(sock);
 
     return 0;
 }

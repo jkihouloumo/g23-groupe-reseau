@@ -12,11 +12,11 @@ void error(const char *msg)
     exit(1);
 }
 
-void sockaddr_in init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
+void init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
     int portno;
 
 //clean the serv_add structure
-    memset(serv_addr, '0',sizeof(serv_addr));
+    memset(serv_addr, '0' ,sizeof(serv_addr));
 
 //cast the port from a string to an int
     portno   = atoi(port);
@@ -65,6 +65,9 @@ int do_accept(int socket, struct sockaddr* addr, socklen_t* addrlen) {
     perror("accept");
     exit(EXIT_FAILURE);
   }
+  else{
+    printf("Connexion établie \n");
+  }
   return sockAccept;
 }
 
@@ -91,7 +94,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-
+    printf("Initialisation du serveur\n");
     //create the socket, check for validity!
     //do_socket()
     int sock = do_socket(PF_INET,SOCK_STREAM,0);
@@ -99,13 +102,14 @@ int main(int argc, char** argv)
 
     //init the serv_add structure
     //init_serv_addr()
-    struct sockaddr_in sockAddr;
+    struct sockaddr_in *sockAddr;
     init_serv_addr(argv[1], sockAddr);
 
     //perform the binding
     //we bind on the tcp port specified
     //do_bind()
-    do_bind(sock,sockAddr,sizeof(*sockAddr));
+
+    do_bind(sock,(struct sockaddr *) sockAddr,sizeof(sockAddr));
 
     //specify the socket to be a server socket and listen for at most 20 concurrent client
     //listen()
@@ -114,26 +118,34 @@ int main(int argc, char** argv)
       perror("listen");
       exit(EXIT_FAILURE);
     }
+    else{
+      int port = atoi(argv[1]);
+      printf("Serveur en écoute sur le port %d\n", port);
+    }
     int i;
     for (i=0;i<21;i++)
     {
 
         //accept connection from client
         //do_accept()
-        int sockAccept = do_accept(sock,sockAddr,sizeof(*sockAddr));
+        int *length=malloc(sizeof(int));
+        *length = sizeof(sockAddr);
+        int sockAccept = do_accept(sock,(struct sockaddr *) sockAddr,length);
 
-        while(true){
+        while(1){
           char *buf = malloc(sizeof(char));
+          char *str = malloc(sizeof(char));
           int len;
-          do{
-            printf("Veuillez entrer la taille de votre message\n");
-            scanf('%d',&len);
-          } while(len < 0);
-        //read what the client has to say
           do_read(sock, buf, len);
+          do_write(sockAccept, str, len);
+
+        //read what the client has to say
+
         }
         //we write back to the client
-        do_write(sockAccept, buf, len);
+
+
+
 
         //clean up client socket
     }

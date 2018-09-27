@@ -8,55 +8,6 @@
 #include <netdb.h>
 
 
-
-int main(int argc,char** argv)
-{
-
-
-    if (argc != 3)
-    {
-        fprintf(stderr,"usage: RE216_CLIENT hostname port\n");
-        return 1;
-    }
-    struct addrinfo** res;
-    //get address info from the server
-    get_addr_info(argv[1], argv[2], res);
-
-    //get the socket
-    s = do_socket(hints.ai_family, hints.ai_socktype, hints.ai_protocol);
-
-    //connect to remote socket
-    do_connect()
-
-    //get user input
-    readline()
-
-    //send message to the server
-    handle_client_message()
-
-    return 0;
-}
-
-
-void get_addr_info(const char* address, const char* port, struct addrinfo** res){
-  int status;
-  struct addrinfo hints;
-
-  memset(&hints,0,sizeof(hints));
-
-  hints.ai_family=AF_INET;
-  hints.ai_socktype=SOCK_STREAM;
-  hints.ai_protocol=0;
-  hints.ai_flags=AI_PASSIVE;
-
-  status = getaddrinfo(address,port,&hints,res);
-  if (status == -1) {
-    exit(EXIT_FAILURE);
-  }
-}
-
-
-
 int do_socket(int domain, int type, int protocol) {
   int sockfd;
   int yes = 1;
@@ -93,14 +44,53 @@ void readline(int fd, void *str, size_t maxlen){
   printf("Veuillez entrer un message à envoyer\n");
   fgets(str, maxlen, stdin);
   do{
-    msg += read(sockfd, buf+msg, len-msg;
-  } while(msg!= len);
+    msg += read(fd, str+msg, maxlen-msg);
+  } while(msg!= maxlen);
 }
 
 
-void handle_client_message(){
+void handle_client_message(int fd, const void *str, size_t maxlen){
   int sockWrite = 0;
   do{
-    sockWrite += write(fd, buf+sockWrite, len-sockWrite);
-  } while(sockWrite != len);
+    sockWrite += write(fd, str+sockWrite, maxlen-sockWrite);
+  } while(sockWrite != maxlen);
+}
+
+int main(int argc,char** argv)
+{
+
+
+    if (argc != 3)
+    {
+        fprintf(stderr,"usage: RE216_CLIENT hostname port\n");
+        return 1;
+    }
+
+    printf("En attente d'un serveur\n");
+    
+    struct sockaddr_in sock_host;
+    int sockfd;
+    int port = atoi(argv[2]);
+    //get the socket
+    sockfd = do_socket(AF_INET,SOCK_STREAM,0);
+
+    memset(&sock_host, '\0', sizeof(sock_host));
+    sock_host.sin_family = AF_INET;
+    sock_host.sin_port = htons(port);
+    inet_aton(argv[1], &sock_host.sin_addr);
+    //get address info from the server
+
+
+    //connect to remote socket
+    do_connect(sockfd,(struct sockaddr *) &sock_host,sizeof(sock_host));
+
+    //get user input
+    char *str=malloc(10);
+
+    readline(sockfd,str,100);
+
+    //send message to the server
+    handle_client_message(sockfd,str,100);
+
+    return 0;
 }

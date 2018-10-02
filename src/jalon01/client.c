@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 
 int do_socket(int domain, int type, int protocol) {
@@ -21,31 +23,30 @@ int do_socket(int domain, int type, int protocol) {
   }
   else
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1){
-        error("ERROR setting socket options");
+        perror("ERROR setting socket options");
       }
     return sockfd;
   }
 
 
 
-void do_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+int do_connect(int sockfd, const struct sockaddr *addr, int addrlen) {
 
     int res = connect(sockfd, addr, addrlen);
 
     if (res != 0) {
-      perror("connect");
+      printf("::Erreur de connexion\n");
       exit(EXIT_FAILURE);
     }
-
+    return res;
 }
 
 void readline(int fd, void *str, size_t maxlen){
   int msg = 0;
-  printf("Veuillez entrer un message à envoyer\n");
+  printf("::Prêt à lire le message\n");
+  printf("::Veuillez entrer un message à envoyer\n");
   fgets(str, maxlen, stdin);
-  do{
-    msg += read(fd, str+msg, maxlen-msg);
-  } while(msg!= maxlen);
+
 }
 
 
@@ -54,6 +55,23 @@ void handle_client_message(int fd, const void *str, size_t maxlen){
   do{
     sockWrite += write(fd, str+sockWrite, maxlen-sockWrite);
   } while(sockWrite != maxlen);
+}
+
+int send_client_message(int sock,char *buffer,int length){
+  int sockSend = send(sock,buffer,length,0);
+  if (sockSend==-1){
+    perror("erreur d'envoi");
+  }
+  length = sockSend;
+  return sockSend;
+}
+
+int recv_client_message(int sock,char *buffer,int length){
+  int sockRecv = recv(sock,buffer,length,0);
+  if (sockRecv==-1){
+    perror("erreur de reception");
+  }
+  return sockRecv;
 }
 
 int main(int argc,char** argv)
@@ -66,31 +84,50 @@ int main(int argc,char** argv)
         return 1;
     }
 
-    printf("En attente d'un serveur\n");
-    
+    printf("En attente d'un serveur ...\n");
+
     struct sockaddr_in sock_host;
     int sockfd;
     int port = atoi(argv[2]);
     //get the socket
-    sockfd = do_socket(AF_INET,SOCK_STREAM,0);
+    sockfd = do_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 
     memset(&sock_host, '\0', sizeof(sock_host));
     sock_host.sin_family = AF_INET;
     sock_host.sin_port = htons(port);
-    inet_aton(argv[1], &sock_host.sin_addr);
+    inet_aton("argv[1]", &sock_host.sin_addr);
     //get address info from the server
 
-
     //connect to remote socket
-    do_connect(sockfd,(struct sockaddr *) &sock_host,sizeof(sock_host));
+    int sockConnect = do_connect(sockfd,(struct sockaddr *) &sock_host,sizeof(sock_host));
+    if(sockConnect != -1){
+      printf("::Connecté au serveur sur le port %d\n", port);
+    }
+      fflush(stdout);
+      //get user input
+      char *buf=malloc(255);
+      char *str=malloc(255);
+      int length;
+      do{
+        printf(">>Veuillez entrer la taille du message\n");
+        scanf("%d",&length);
+      } while(length < 1);
 
-    //get user input
-    char *str=malloc(10);
+      while(1){
+        readline(sockfd,buf,length);
 
-    readline(sockfd,str,100);
+        //send message to the server
+        printf("::Prêt à envoyer le message\n");
+        int sockSend = send_client_message(sockfd,buf,length);
+        //handle_client_message(sockfd,str,length);
 
-    //send message to the server
-    handle_client_message(sockfd,str,100);
+        if(strcmp(buf,"/quit")==0){
+          printf("::Fermeture de la connexion\n");
+          close(sockfd);
+          break;
+        }
 
+        int sockRecv = recv_client_message(sockfd,str,length);
+      }
     return 0;
 }

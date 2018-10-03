@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
+#include <poll.h>
 void error(const char *msg)
 {
     perror(msg);
@@ -16,7 +16,7 @@ void init_serv_addr(const char* port, struct sockaddr_in *serv_addr) {
     int portno;
 
 //clean the serv_add structure
-    memset(serv_addr, '0' ,sizeof(serv_addr));
+    memset(serv_addr, '\0' ,sizeof(serv_addr));
 
 //cast the port from a string to an int
     portno   = atoi(port);
@@ -85,6 +85,21 @@ void do_write(int fd, const void *buf, size_t len){
   } while(sockWrite != len);
 }
 
+int send_message(int sock,char *buffer,int length){
+  int sockSend = send(sock,buffer,length,0);
+  if (sockSend==-1){
+    perror("erreur d'envoi");
+  }
+  return sockSend;
+}
+
+int recv_message(int sock,char *buffer,int length){
+  int sockRecv = recv(sock,buffer,length,0);
+  if (sockRecv==-1){
+    perror("erreur de reception");
+  }
+  return sockRecv;
+}
 int main(int argc, char** argv)
 {
 
@@ -94,22 +109,21 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    printf("Initialisation du serveur\n");
-    //create the socket, check for validity!
-    //do_socket()
-    int sock = do_socket(PF_INET,SOCK_STREAM,0);
-
-
+    printf("Initialisation du serveur ...\n");
     //init the serv_add structure
     //init_serv_addr()
-    struct sockaddr_in *sockAddr;
-    init_serv_addr(argv[1], sockAddr);
+    struct sockaddr_in sockAddr;
+    init_serv_addr(argv[1], &sockAddr);
+
+    //create the socket, check for validity!
+    //do_socket()
+    int sock = do_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 
     //perform the binding
     //we bind on the tcp port specified
     //do_bind()
 
-    do_bind(sock,(struct sockaddr *) sockAddr,sizeof(sockAddr));
+    do_bind(sock,(struct sockaddr *) &sockAddr,sizeof(&sockAddr));
 
     //specify the socket to be a server socket and listen for at most 20 concurrent client
     //listen()
@@ -120,36 +134,49 @@ int main(int argc, char** argv)
     }
     else{
       int port = atoi(argv[1]);
-      printf("Serveur en écoute sur le port %d\n", port);
+      printf("::Serveur en écoute sur le port %d\n", port);
     }
-    int i;
-    for (i=0;i<21;i++)
-    {
-
         //accept connection from client
         //do_accept()
         int *length=malloc(sizeof(int));
-        *length = sizeof(sockAddr);
-        int sockAccept = do_accept(sock,(struct sockaddr *) sockAddr,length);
+        *length = sizeof(&sockAddr);
+        int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
+        fflush(stdout);
+        struct pollfd polls[];
+        nfds_t *nfd=malloc(sizeof(nfds_t));
+        struct timespec *timeout = malloc(sizeof(timespec));
+        polls[0].fd = sock;
+        polls[0].events = POLLIN;
+
 
         while(1){
+          int nbrpoll = poll(polls,*nfd,timeout);
+          int i;
+          /*if(nbrpoll >0){
+            for (i=0;)
+            }
+          }*/
           char *buf = malloc(sizeof(char));
           char *str = malloc(sizeof(char));
-          int len;
-          do_read(sock, buf, len);
-          do_write(sockAccept, str, len);
 
-        //read what the client has to say
+          //read what the client has to say
+          //do_read(sock, buf, len);
+          int nbBytes = recv_message(sockAccept,buf,255);
+
+          if(strncmp(buf,"/quit",5)==0){
+            printf("::Fermeture de la connexion\n");
+            close(sock);
+            break;
+          }
+          else{
+            printf("<< %s\n", buf);
+          }
+          //do_write(sockAccept, buf, len);
+          int sockSend = send_message(sockAccept,buf,255);
 
         }
         //we write back to the client
-
-
-
-
         //clean up client socket
-    }
-
     //clean up server socket
     close(sock);
 

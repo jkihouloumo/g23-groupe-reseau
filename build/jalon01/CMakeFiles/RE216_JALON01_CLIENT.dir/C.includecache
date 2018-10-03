@@ -21,4 +21,8 @@ sys/socket.h
 -
 netdb.h
 -
+netinet/in.h
+-
+arpa/inet.h
+-
 

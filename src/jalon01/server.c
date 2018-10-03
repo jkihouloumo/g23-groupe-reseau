@@ -138,41 +138,62 @@ int main(int argc, char** argv)
     }
         //accept connection from client
         //do_accept()
+        int nbr_client =1;
         int *length=malloc(sizeof(int));
         *length = sizeof(&sockAddr);
-        int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
+        //int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
         fflush(stdout);
-        struct pollfd polls[];
-        nfds_t *nfd=malloc(sizeof(nfds_t));
-        struct timespec *timeout = malloc(sizeof(timespec));
+        struct pollfd polls[1];
         polls[0].fd = sock;
         polls[0].events = POLLIN;
 
+        //polls[1].fd = sockAccept;
+
+
 
         while(1){
-          int nbrpoll = poll(polls,*nfd,timeout);
+          printf("recommence\n");
           int i;
-          /*if(nbrpoll >0){
-            for (i=0;)
+          int timeout = -1;
+
+          int nbrpoll = poll(polls,nbr_client,timeout);
+
+          if(nbrpoll>0){
+
+
+            if (polls[0].revents !=0 ){
+              nbr_client +=1;
+              polls[nbr_client].fd = do_accept(sock,(struct sockaddr *) &sockAddr,length);
+              printf("nbr client est égal à %d\n",nbr_client);
             }
-          }*/
-          char *buf = malloc(sizeof(char));
-          char *str = malloc(sizeof(char));
 
-          //read what the client has to say
-          //do_read(sock, buf, len);
-          int nbBytes = recv_message(sockAccept,buf,255);
+            for(i=1;i=nbr_client;i++){
+              printf("avant for\n");
+              if(polls[i].revents != 0){
+                char *buf = malloc(sizeof(char));
+                printf("apres for\n");
+                //read what the client has to say
+                //do_read(sock, buf, len);
+                int nbBytes = recv_message(polls[i].fd,buf,255);
+                if(nbBytes == 0) {
+                  printf("pas de message");
+                  break;
+                }
 
-          if(strncmp(buf,"/quit",5)==0){
-            printf("::Fermeture de la connexion\n");
-            close(sock);
-            break;
+                if(strncmp(buf,"/quit",5)==0){
+                  printf("::Fermeture de la connexion\n");
+                  close(sock);
+                  break;
+                }
+                else{
+                  printf("<< %s\n", buf);
+                }
+                //do_write(sockAccept, buf, len);
+                int sockSend = send_message(polls[i].fd,buf,255);
+              }
+            }
           }
-          else{
-            printf("<< %s\n", buf);
-          }
-          //do_write(sockAccept, buf, len);
-          int sockSend = send_message(sockAccept,buf,255);
+
 
         }
         //we write back to the client

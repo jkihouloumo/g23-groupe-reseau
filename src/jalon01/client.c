@@ -87,7 +87,7 @@ int main(int argc,char** argv)
 
     struct sockaddr_in sock_host;
     int sockfd;
-    int port = atoi(argv[2]);        char cmp =
+    int port = atoi(argv[2]);
     //get the socket
     sockfd = do_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 
@@ -129,7 +129,7 @@ int main(int argc,char** argv)
 
         char *str=malloc(255);
         int sockRecv = recv_client_message(sockfd,str,255);
-        printf(">> %s\n", str);
+        printf(">> serveur dit : %s\n", str);
       }
     return 0;
 }

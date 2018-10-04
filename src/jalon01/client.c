@@ -43,9 +43,16 @@ int do_connect(int sockfd, const struct sockaddr *addr, int addrlen) {
 
 void readline(int fd, void *str, size_t maxlen){
   int msg = 0;
+<<<<<<< HEAD
   printf("::Prêt à lire, ");
   printf(" veuillez entrer un message à envoyer\n");
   fgets(str, maxlen, stdin);
+=======
+  printf("::Prêt à lire le message\n");
+  printf("::Veuillez entrer un message à envoyer\n");
+  fgets(str, maxlen, stdin);
+
+>>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
 }
 
 
@@ -104,7 +111,12 @@ int main(int argc,char** argv)
     }
       fflush(stdout);
       //get user input
+<<<<<<< HEAD
 
+=======
+      char *buf=malloc(255);
+      char *str=malloc(255);
+>>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
       int length;
       do{
         printf(">>Veuillez entrer la taille du message\n");
@@ -112,6 +124,7 @@ int main(int argc,char** argv)
       } while(length < 1);
 
       while(1){
+<<<<<<< HEAD
         char *buf=malloc(255);
         readline(sockfd,buf,length);
 
@@ -122,14 +135,28 @@ int main(int argc,char** argv)
         }
         //handle_client_message(sockfd,str,length);
         if(strncmp(buf,"/quit",5)==0){
+=======
+        readline(sockfd,buf,length);
+
+        //send message to the server
+        printf("::Prêt à envoyer le message\n");
+        int sockSend = send_client_message(sockfd,buf,length);
+        //handle_client_message(sockfd,str,length);
+
+        if(strcmp(buf,"/quit")==0){
+>>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
           printf("::Fermeture de la connexion\n");
           close(sockfd);
           break;
         }
 
+<<<<<<< HEAD
         char *str=malloc(255);
         int sockRecv = recv_client_message(sockfd,str,255);
         printf(">> serveur dit : %s\n", str);
+=======
+        int sockRecv = recv_client_message(sockfd,str,length);
+>>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
       }
     return 0;
 }

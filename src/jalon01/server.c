@@ -141,6 +141,7 @@ int main(int argc, char** argv)
         int nbr_client = 0;
         int *length=malloc(sizeof(int));
         *length = sizeof(&sockAddr);
+<<<<<<< HEAD
         //int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
         fflush(stdout);
         struct pollfd polls[25];
@@ -148,6 +149,28 @@ int main(int argc, char** argv)
         polls[0].events = POLLIN;
 
         //polls[1].fd = sockAccept;
+=======
+        int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
+        fflush(stdout);
+        while(1){
+          char *buf = malloc(sizeof(char));
+          char *str = malloc(sizeof(char));
+          int nbBytes = recv_message(sockAccept,buf,255);
+          if(strcmp(buf,"/quit")==0){
+            printf("::Fermeture de la connexion\n");
+            close(sock);
+            break;
+          }
+          else{
+            printf("<< %s\n", buf);
+          }
+          int sockSend = send_message(sockAccept,buf,255);
+          //read what the client has to say
+          //do_read(sock, buf, len);
+          //printf("%s", buf);
+          //do_write(sockAccept, buf, len);
+
+>>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
 
 
 
@@ -197,6 +220,11 @@ int main(int argc, char** argv)
 
         //we write back to the client
         //clean up client socket
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
     //clean up server socket
     close(sock);
 

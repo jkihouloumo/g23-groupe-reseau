@@ -43,16 +43,9 @@ int do_connect(int sockfd, const struct sockaddr *addr, int addrlen) {
 
 void readline(int fd, void *str, size_t maxlen){
   int msg = 0;
-<<<<<<< HEAD
   printf("::Prêt à lire, ");
   printf(" veuillez entrer un message à envoyer\n");
   fgets(str, maxlen, stdin);
-=======
-  printf("::Prêt à lire le message\n");
-  printf("::Veuillez entrer un message à envoyer\n");
-  fgets(str, maxlen, stdin);
-
->>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
 }
 
 
@@ -110,53 +103,43 @@ int main(int argc,char** argv)
       printf("::Connecté au serveur sur le port %d\n", port);
     }
       fflush(stdout);
-      //get user input
-<<<<<<< HEAD
 
-=======
-      char *buf=malloc(255);
-      char *str=malloc(255);
->>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
-      int length;
+      char *init=malloc(255);
+      char *buf=malloc(255*sizeof(char));
+      char *str=malloc(255*sizeof(char));
+      int length=255;
+      int quit = 1;
+
+
+
+
       do{
-        printf(">>Veuillez entrer la taille du message\n");
-        scanf("%d",&length);
-      } while(length < 1);
+        //get user input
+        int recvInit = recv_client_message(sockfd,init,255);
+        printf("[SERVEUR] : %s\n", init);
+        if(strncmp(init, "/ok",3)==0){
+          readline(sockfd,buf,length);
 
-      while(1){
-<<<<<<< HEAD
-        char *buf=malloc(255);
-        readline(sockfd,buf,length);
+          //send message to the server
+          int sockSend = send_client_message(sockfd,buf,length);
+          /*if(sockSend > 0){
+            printf("::Message envoyé\n");
+          */
 
-        //send message to the server
-        int sockSend = send_client_message(sockfd,buf,length);
-        if(sockSend > 0){
-          printf("::Message envoyé\n");
+          if(strncmp(buf,"/quit",5)==0){
+            printf("::Fermeture de la connexion\n");
+            close(sockfd);
+            quit = -1;
+            break;
+          }
+
+          int sockRecv = recv_client_message(sockfd,str,length);
+          if(sockRecv > 0){
+            printf("[SERVEUR] : %s\n", str);
+          }
         }
-        //handle_client_message(sockfd,str,length);
-        if(strncmp(buf,"/quit",5)==0){
-=======
-        readline(sockfd,buf,length);
+      } while(quit != -1);
 
-        //send message to the server
-        printf("::Prêt à envoyer le message\n");
-        int sockSend = send_client_message(sockfd,buf,length);
-        //handle_client_message(sockfd,str,length);
 
-        if(strcmp(buf,"/quit")==0){
->>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
-          printf("::Fermeture de la connexion\n");
-          close(sockfd);
-          break;
-        }
-
-<<<<<<< HEAD
-        char *str=malloc(255);
-        int sockRecv = recv_client_message(sockfd,str,255);
-        printf(">> serveur dit : %s\n", str);
-=======
-        int sockRecv = recv_client_message(sockfd,str,length);
->>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
-      }
     return 0;
 }

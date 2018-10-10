@@ -66,7 +66,7 @@ int do_accept(int socket, struct sockaddr* addr, socklen_t* addrlen) {
     exit(EXIT_FAILURE);
   }
   else{
-    printf("Connexion établie \n");
+    printf("Nouvelle connexion établie : ");
   }
   return sockAccept;
 }
@@ -90,6 +90,7 @@ int send_message(int sock,char *buffer,int length){
   if (sockSend==-1){
     perror("erreur d'envoi");
   }
+  length = sockSend;
   return sockSend;
 }
 
@@ -100,6 +101,7 @@ int recv_message(int sock,char *buffer,int length){
   }
   return sockRecv;
 }
+
 int main(int argc, char** argv)
 {
 
@@ -138,93 +140,100 @@ int main(int argc, char** argv)
     }
         //accept connection from client
         //do_accept()
-        int nbr_client = 0;
+        int j;
+        int nbr_client = 1, max = 21;
         int *length=malloc(sizeof(int));
         *length = sizeof(&sockAddr);
-<<<<<<< HEAD
         //int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
         fflush(stdout);
-        struct pollfd polls[25];
+        struct pollfd polls[max];
+        memset(polls,0, sizeof(polls));
         polls[0].fd = sock;
-        polls[0].events = POLLIN;
-
-        //polls[1].fd = sockAccept;
-=======
-        int sockAccept = do_accept(sock,(struct sockaddr *) &sockAddr,length);
-        fflush(stdout);
-        while(1){
-          char *buf = malloc(sizeof(char));
-          char *str = malloc(sizeof(char));
-          int nbBytes = recv_message(sockAccept,buf,255);
-          if(strcmp(buf,"/quit")==0){
-            printf("::Fermeture de la connexion\n");
-            close(sock);
-            break;
-          }
-          else{
-            printf("<< %s\n", buf);
-          }
-          int sockSend = send_message(sockAccept,buf,255);
-          //read what the client has to say
-          //do_read(sock, buf, len);
-          //printf("%s", buf);
-          //do_write(sockAccept, buf, len);
-
->>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
-
-
-
-        while(1){
+        //polls[0].events = POLLIN;
+        for(j=0 ; j<max; j++){
+          polls[j].events = POLLIN;
+        }
+        int quit = 1;
+        do {
           int i;
           int timeout = -1;
 
-          int nbrpoll = poll(polls,nbr_client,timeout);
+          int nbrpoll = poll(polls,max,timeout);
 
-          while(nbrpoll>0){
-            printf("oeoeoe");
+          //Erreur au niveau de la fonction poll
+          if(nbrpoll < 0){
+            perror("echec poll");
+            fflush(stdout);
+            break;
+          }
 
-            if (polls[0].revents != 0){
-              if(nbr_client < 21){
-                nbr_client +=1;
-                polls[nbr_client].fd = do_accept(sock,(struct sockaddr *) &sockAddr,length);
-                printf("nbr client est égal à %d\n",nbr_client);
+          //Timeout écoulé ===> fermeture de la connexion
+          else if (nbrpoll == 0){
+            printf("Temps d'attente écoulé\n");
+            fflush(stdout);
+            break;
+          }
 
-                char *buf = malloc(sizeof(char));
-                //read what the client has to say
-                //do_read(sock, buf, len);
-                int nbBytes = recv_message(polls[nbr_client].fd,buf,255);
-                if(nbBytes == 0) {
-                  printf("pas de message\n");
-                  break;
+          //Actions en attente
+          else{
+            for(i=0; i<nbr_client; i++){
+
+              if(polls[i].revents == POLLIN){
+                printf("%d\n",i);
+                if(polls[i].fd == sock){
+                  int sock_client = do_accept(sock,(struct sockaddr *) &sockAddr,length);
+                  //printf("%d\n",sock_client);
+                  if(sock_client != -1){
+                    if(nbr_client < max){ //on vérifie si laliste d'attente est saturée
+                      int msg = send_message(sock_client,"/ok",255);
+                      printf("sock client %d\n",sock_client);
+                      polls[nbr_client].fd = sock_client;
+
+                      printf("nbr client = %d\n",nbr_client);
+
+                      nbr_client +=1;
+                    }
+                    else{ //on prévient le client que sa requête ne peut pas être traitée pour le moment
+                      int sockSend = send_message(sock_client,"trop de clients",255);
+                    }
+                  }
                 }
+              //On traite le cas où aucun nouveau client ne veut se connecter : on lit ce que ceux connectés ont à dire
+              if(i != 0){
+                printf("essai\n");
+                fflush(stdout);
+                int sock_client = polls[i].fd;
 
-                if(strncmp(buf,"/quit",5)==0){
-                  printf("::Fermeture de la connexion\n");
-                  close(sock);
-                  break;
+                  //printf("esssai\n");
+                  char *buf = malloc(255);
+                  //read what the client has to say
+                  int nbBytes = recv_message(polls[i].fd,buf,255);
+                  //printf("%d\n", nbBytes);
+                  if(nbBytes > 0){
+                    if(strncmp(buf,"/quit",5)==0){
+                      printf("::Fermeture de la connexion\n");
+                      quit = -1;
+                      close(polls[i].fd);
+                      nbr_client -= 1;
+                      printf("nombre client = %d\n", nbr_client);
+                    }
+                    else{
+                      printf(" [CLIENT %d ] : %s\n", i, buf);
+                      //write back to the client
+                      int sockSend = send_message(polls[i].fd,buf,255);
+                    }
+                  }
+                  int msg = send_message(sock_client,"/ok",255);
                 }
-                else{
-                  printf(">> client numéro %d dit : %s\n", nbr_client, buf);
-                }
-                //do_write(sockAccept, buf, len);
-                int sockSend = send_message(polls[nbr_client].fd,buf,255);
-              }
-              else{
-                int sockSend = send_message(polls[nbr_client].fd,"0",255);
               }
             }
           }
-        }
+        } while(quit != -1);
 
 
 
         //we write back to the client
         //clean up client socket
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 7f64754f0d9c9541a52551316012532c9cfa2074
     //clean up server socket
     close(sock);
 

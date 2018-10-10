@@ -179,14 +179,14 @@ int main(int argc, char** argv)
             for(i=0; i<nbr_client; i++){
 
               if(polls[i].revents == POLLIN){
-                printf("%d\n",i);
+                //printf("%d\n",i);
                 if(polls[i].fd == sock){
                   int sock_client = do_accept(sock,(struct sockaddr *) &sockAddr,length);
                   //printf("%d\n",sock_client);
                   if(sock_client != -1){
                     if(nbr_client < max){ //on vérifie si laliste d'attente est saturée
                       int msg = send_message(sock_client,"/ok",255);
-                      printf("sock client %d\n",sock_client);
+                      //printf("sock client %d\n",sock_client);
                       polls[nbr_client].fd = sock_client;
 
                       printf("nbr client = %d\n",nbr_client);
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
                 }
               //On traite le cas où aucun nouveau client ne veut se connecter : on lit ce que ceux connectés ont à dire
               if(i != 0){
-                printf("essai\n");
+                //printf("essai\n");
                 fflush(stdout);
                 int sock_client = polls[i].fd;
 
@@ -212,7 +212,7 @@ int main(int argc, char** argv)
                   if(nbBytes > 0){
                     if(strncmp(buf,"/quit",5)==0){
                       printf("::Fermeture de la connexion\n");
-                      quit = -1;
+                      //quit = -1;
                       close(polls[i].fd);
                       nbr_client -= 1;
                       printf("nombre client = %d\n", nbr_client);
@@ -231,8 +231,6 @@ int main(int argc, char** argv)
         } while(quit != -1);
 
 
-
-        //we write back to the client
         //clean up client socket
     //clean up server socket
     close(sock);

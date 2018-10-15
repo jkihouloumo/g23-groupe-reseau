@@ -11,8 +11,7 @@
 struct user{
     char* pseudo;
     char* ipAddress;
-    int sock;
-    int logged;
+    int sockNumber;
 
 };
 
@@ -76,7 +75,7 @@ int do_accept(int socket, struct sockaddr* addr, socklen_t* addrlen) {
     exit(EXIT_FAILURE);
   }
   else{
-    printf("Nouvelle connexion établie... \n");
+    printf("Nouvelle connexion établie : ");
   }
   return sockAccept;
 }
@@ -98,10 +97,6 @@ int recv_message(int sock,char *buffer,int length){
   return sockRecv;
 }
 
-void display_message_server(char* msg){
-  printf("[SERVEUR] : %s\n", msg);
-}
-
 int main(int argc, char** argv)
 {
 
@@ -119,17 +114,17 @@ int main(int argc, char** argv)
 
     //create the socket, check for validity!
     //do_socket()
-    int sock_serveur = do_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+    int sock = do_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 
     //perform the binding
     //we bind on the tcp port specified
     //do_bind()
 
-    do_bind(sock_serveur,(struct sockaddr *) &sockAddr,sizeof(&sockAddr));
+    do_bind(sock,(struct sockaddr *) &sockAddr,sizeof(&sockAddr));
 
     //specify the socket to be a server socket and listen for at most 20 concurrent client
     //listen()
-    int sockListen = listen(sock_serveur,20);
+    int sockListen = listen(sock,20);
     if(sockListen== -1){
       perror("listen");
       exit(EXIT_FAILURE);
@@ -140,24 +135,21 @@ int main(int argc, char** argv)
     }
         fflush(stdout);
         int j;
-        int nbr_client = 1, max = 21, quit = 1;
+        int nbr_client = 0, max = 21, quit = 1;
         int *length=malloc(sizeof(int));
         *length = sizeof(&sockAddr);
 
         //On initialise la structure pollfd
         struct pollfd polls[max];
         memset(polls,0, sizeof(polls));
-        polls[0].fd = sock_serveur;
+        polls[0].fd = sock;
         for(j=0 ; j<max; j++){
           polls[j].events = POLLIN;
         }
 
         //On initialise la structure user
         struct user users[max];
-        memset(users,0, sizeof(users));
-        for(j=0 ; j<max; j++){
-          users[j].logged = 0;
-        }
+        memset(users,0, sizeof(user));
 
         do {
           int i;
@@ -183,49 +175,42 @@ int main(int argc, char** argv)
           else{
             for(i=0; i<nbr_client; i++){
               if(polls[i].revents == POLLIN){
-                if(polls[i].fd == sock_serveur){
+                if(polls[i].fd == sock){
                   //accept connection from client
-                  int sock_client = do_accept(sock_serveur,(struct sockaddr *) &sockAddr,length);
-                  //printf("%d\n", sock_client);
+                  int sock_client = do_accept(sock,(struct sockaddr *) &sockAddr,length);
                   if(sock_client != -1){
                     if(nbr_client < max){ //on vérifie si la liste d'attente est saturée
-                      int initConnect = send_message(sock_client,"/init",255);
+
                       char *address = malloc(255);
                       char *pseudo = malloc(255);
 
                       int ipAddress = recv_message(sock_client,address,100);
-                      users[nbr_client-1].ipAddress = address;
-                      users[nbr_client-1].sock = sock_client;
+                      users[nbr_client].ipAddress = ipAddress;
+                      users[nbr_client].sock = sock_client;
 
+                      int ok = send_message(sock_client,"/ok",255);
                       int user_pseudo = recv_message(sock_client,pseudo,255);
                       if(strncmp(pseudo,"/nick",5)==0){
                         char *user_pseudo = malloc(255);
                         user_pseudo = strchr(pseudo, ' ');
                         user_pseudo = user_pseudo+1;
-                        users[nbr_client-1].pseudo = user_pseudo;
-                        users[nbr_client-1].logged = 1;
+                        users[nbr_client].pseudo = user_pseudo;
                       }
 
-                      printf("Veuillez accueillir %s\n",users[nbr_client-1].pseudo);
-                      //printf("ton adresse ip est %s\n",users[nbr_client-1].ipAddress);
-
-                      if(users[nbr_client-1].logged == 1){
-                        int ok = send_message(sock_client,"/ok",255);
-                      }
-
+                      printf("pseudo client = %s\n",users[nbr_client].pseudo);
+                      printf("adresse ip client = %s\n",users[nbr_client].ipAddress);
+                      nbr_client +=1;
                       polls[nbr_client].fd = sock_client;
                       printf("nbr client = %d\n",nbr_client);
-                      nbr_client +=1;
 
                     }
                     else{ //on prévient le client que sa requête ne peut pas être traitée pour le moment
                       int sockSend = send_message(sock_client,"trop de clients",255);
                     }
-
                   }
                 }
               //On traite le cas où aucun nouveau client ne veut se connecter : on lit ce que ceux connectés ont à dire
-              if(i != 0 ){
+              if(i != 0){
                 //printf("essai\n");
                 fflush(stdout);
                 int sock_client = polls[i].fd;
@@ -233,23 +218,12 @@ int main(int argc, char** argv)
                   //read what the client has to say
                   int nbBytes = recv_message(polls[i].fd,buf,255);
                   if(nbBytes > 0){
-
-                    if(strncmp(buf,"/quit",5) == 0){
-                      printf("essai2\n");
+                    if(strncmp(buf,"/quit",5)==0){
                       printf("::Fermeture de la connexion avec le client %d\n", i);
                       close(polls[i].fd);
                       nbr_client = nbr_client - 1;
                       printf("nombre client = %d\n", nbr_client);
                     }
-                    /*else if(strncmp(buf,"/who",4) == 0){
-                      char *who = malloc(255*sizeof(char));
-                      int convert = sprintf(who,"%d",nbr_client-1);
-                      int howMany = send_message(sock_client,who,255);
-
-                      for(j=0; j<nbr_client; j++){
-                        int user = send_message(sock_client, users[i-1].pseudo, 255);
-                      }
-                    }*/
                     else{
                       printf(" [CLIENT %d ] : %s\n", i, buf);
                       //write back to the client
@@ -265,7 +239,7 @@ int main(int argc, char** argv)
 
         //clean up client socket
     //clean up server socket
-    close(sock_serveur);
+    close(sock);
 
     return 0;
 }

@@ -117,7 +117,7 @@ int main(int argc,char** argv)
       fflush(stdout);
 
       char *fromServer=malloc(255*sizeof(char));
-      char *init2=malloc(255*sizeof(char));
+      char *msg=malloc(255*sizeof(char));
       char *buf=malloc(255*sizeof(char));
       char *nbrClient=malloc(255*sizeof(char));
       char *str=malloc(255*sizeof(char));
@@ -127,9 +127,16 @@ int main(int argc,char** argv)
 
 
       do{
+        memset(fromServer, '\0', 255);
+        memset(msg, '\0', 255);
+
         //get user input
         int recvInit = recv_client_message(sockfd,fromServer,255);
-        printf("[SERVEUR] : %s\n", fromServer);
+        if(strncmp(fromServer, "\0", 1) != 0) {
+          printf("[SERVEUR] : %s\n", fromServer);
+
+      }
+
         //display_message_server(fromServer);
 
         //Attends le feu vert du serveur pour envoyer son pseudo
@@ -139,6 +146,7 @@ int main(int argc,char** argv)
 
           do{ //on s'assure que le client rentre son pseudo comme il faut
             printf("[SERVEUR] : please logon with /nick <your pseudo>\n");
+            fflush(stdin);
             readline(sockfd,buf,length);
             quit = quit_chat(buf);
             if(quit == -1){
@@ -149,29 +157,54 @@ int main(int argc,char** argv)
           } while(strncmp(buf, "/nick ", 6) != 0);
           char *pseudo = malloc(255*sizeof(char));
           pseudo = strchr(buf, ' ');
-          printf("[SERVEUR] Bienveue sur le chat%s\n", pseudo);
+          printf("[SERVEUR] : Bienvenue sur le chat%s\n", pseudo);
 
           //Envoi du pseudo au serveur
           int username = send_client_message(sockfd,buf,length);
 
         }
 
-        if(strncmp(fromServer, "/ok",3)==0 && init == 1){
+        if(init == 1){
+          //if(strncmp(fromServer, "/ok",3)==0){
         //Attends le feu vert du serveur pour envoyer un message
           //printf("nouvelle boucle\n");
+          
+          fflush(stdin);
           readline(sockfd,str,length);
           quit = quit_chat(str);
           if(quit == -1){
             int sendQuit = send_client_message(sockfd,str,length);
             break;
           }
-          /*if(strncmp(str,"/who",4)){
-            int recvNbClient = recv_client_message(sockfd, nbrClient,255);
-            int nbr = atoi(nbrClient);
-            printf("[SERVEUR] Il y a %d profil(s) connecté(s ) :\n", nbr);
-          }*/
+
+
+            if(strncmp(str,"/who",4)==0 && strncmp(str,"/whoi",5) != 0){
+              int who = 0;
+              do{
+                int recvNbClient = recv_client_message(sockfd, nbrClient,255);
+                int nbr = atoi(nbrClient);
+                int j;
+                printf("[SERVEUR] : Il y a %d profil(s) connecté(s ) :\n", nbr);
+                for(j=0; j<nbr+1; j++){
+                  char *list = malloc(255*sizeof(char));
+                  int user = recv_client_message(sockfd, list, 255);
+                  printf(" - %s\n", list);
+                }
+                who = 1;
+              } while(who != 1);
+            }
+
+            if(strncmp(buf,"/whois",6) == 0){
+
+            }
+        //}
+
           int sockSend = send_client_message(sockfd,str,length);
+
+          //
+
         }
+
 
       } while(quit != -1);
 

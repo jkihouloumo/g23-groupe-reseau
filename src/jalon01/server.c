@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     }
         fflush(stdout);
         int j;
-        int nbr_client = 1, max = 21, quit = 1;
+        int nbr_client = 1, max = 21, quit = 1, again = 0;;
         int *length=malloc(sizeof(int));
         *length = sizeof(&sockAddr);
 
@@ -199,19 +199,21 @@ int main(int argc, char** argv)
 
                       int user_pseudo = recv_message(sock_client,pseudo,255);
                       if(strncmp(pseudo,"/nick",5)==0){
-                        char *user_pseudo = malloc(255);
+                        char *user_pseudo = malloc(255*sizeof(char));
+                        const char s[2] = "\0";
                         user_pseudo = strchr(pseudo, ' ');
                         user_pseudo = user_pseudo+1;
+                        user_pseudo = strtok(user_pseudo, s);
                         users[nbr_client-1].pseudo = user_pseudo;
                         users[nbr_client-1].logged = 1;
                       }
 
-                      printf("Veuillez accueillir %s\n",users[nbr_client-1].pseudo);
+                      printf("%s est maintenant connecté\n",users[nbr_client-1].pseudo);
                       //printf("ton adresse ip est %s\n",users[nbr_client-1].ipAddress);
 
-                      if(users[nbr_client-1].logged == 1){
-                        int ok = send_message(sock_client,"/ok",255);
-                      }
+                      //if(users[nbr_client-1].logged == 1){
+                      //  int ok = send_message(sock_client,"/ok",255);
+                    //  }
 
                       polls[nbr_client].fd = sock_client;
                       printf("nbr client = %d\n",nbr_client);
@@ -221,46 +223,77 @@ int main(int argc, char** argv)
                     else{ //on prévient le client que sa requête ne peut pas être traitée pour le moment
                       int sockSend = send_message(sock_client,"trop de clients",255);
                     }
-
                   }
                 }
               //On traite le cas où aucun nouveau client ne veut se connecter : on lit ce que ceux connectés ont à dire
               if(i != 0 ){
                 //printf("essai\n");
-                fflush(stdout);
-                int sock_client = polls[i].fd;
-                  char *buf = malloc(255);
-                  //read what the client has to say
-                  int nbBytes = recv_message(polls[i].fd,buf,255);
-                  if(nbBytes > 0){
 
+                int sock_client = polls[i].fd;
+                //if(users[i-1].logged == 1){
+                  //int msg = send_message(sock_client,"/ok",255);
+              //  }
+                  char *buf=malloc(sizeof(char));
+                  memset(buf, '\0', 255);
+
+
+                  //read what the client has to say
+                  int nbBytes = recv_message(sock_client,buf,255);
+                  //printf("%s\n",buf);
+                  if(strncmp(buf, "\0",1) != 0){
+
+                    fflush(stdout);
                     if(strncmp(buf,"/quit",5) == 0){
-                      printf("essai2\n");
-                      printf("::Fermeture de la connexion avec le client %d\n", i);
+
+                      printf("::Fermeture de la connexion avec %s\n", users[i-1].pseudo);
                       close(polls[i].fd);
+                      users[nbr_client-1].logged = 0;
+
                       nbr_client = nbr_client - 1;
-                      printf("nombre client = %d\n", nbr_client);
+                      printf("nombre client = %d\n", nbr_client-1);
+                      fflush(stdout);
                     }
-                    /*else if(strncmp(buf,"/who",4) == 0){
+
+                    //Pour connaître tous les utilisateurs connectés
+                    if(strncmp(buf,"/who",4) == 0 && strncmp(buf,"/whoi",5) < 0){
                       char *who = malloc(255*sizeof(char));
                       int convert = sprintf(who,"%d",nbr_client-1);
-                      int howMany = send_message(sock_client,who,255);
 
-                      for(j=0; j<nbr_client; j++){
-                        int user = send_message(sock_client, users[i-1].pseudo, 255);
+                      for(j=0; j<nbr_client-1; j++){
+                        if(j==0){
+                          int howMany = send_message(sock_client,who,255);
+                        }
+                        int user = send_message(sock_client, users[j].pseudo, 255);
                       }
-                    }*/
+                      fflush(stdout);
+                    }
+
+                    //POur connaître les informations concernant un utilisateur
+                    if(strncmp(buf,"/whois ",7) == 0){
+                      char *pseudo1 = malloc(255*sizeof(char));
+                      const char s[2] = " ";
+                      //pseudo1 = strchr(pseudo1, ' ');
+                      //pseudo1 = pseudo1+1;
+                      //pseudo = strtok(pseudo, s);
+                      printf("%s\n", pseudo1);
+                      fflush(stdout);
+                    }
+
                     else{
                       printf(" [CLIENT %d ] : %s\n", i, buf);
                       //write back to the client
                       int sockSend = send_message(polls[i].fd,buf,255);
                     }
+
                   }
-                  int msg = send_message(sock_client,"/ok",255);
+
+
+
                 }
               }
             }
           }
+
         } while(quit != -1);
 
         //clean up client socket
